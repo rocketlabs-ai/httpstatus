@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HTTP Status — Interactive Status Code Explorer</title>
+<meta name="description" content="Every HTTP status code explained in plain English. Search, filter, and learn when you'd see each one.">
+<meta property="og:title" content="HTTP Status — Status Code Explorer">
+<meta property="og:description" content="60+ HTTP status codes explained. Search, filter, click to expand.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d1117;--surface:#161b22;--surface2:#1c2230;
+  --border:#30363d;--text:#e6edf3;--muted:#8b949e;--dim:#555d6b;
+  --blue:#58a6ff;--green:#3fb950;--yellow:#d29922;--orange:#e5954b;--red:#f85149;
+  --blue-bg:rgba(88,166,255,.08);--green-bg:rgba(63,185,80,.08);
+  --yellow-bg:rgba(210,153,34,.08);--orange-bg:rgba(229,149,75,.08);--red-bg:rgba(248,81,73,.08);
+  --radius:10px;
+  --font-sans:'Inter',system-ui,sans-serif;--font-mono:'JetBrains Mono',monospace;
+}
+html{font-size:16px}
+body{background:var(--bg);color:var(--text);font-family:var(--font-sans);line-height:1.6;min-height:100dvh}
+.container{max-width:800px;margin:0 auto;padding:24px 16px 80px}
+header{text-align:center;padding:32px 0 24px}
+h1{font-size:clamp(1.8rem,4vw,2.4rem);font-weight:800;letter-spacing:-.5px;margin-bottom:6px}
+h1 .a{color:var(--green)}
+.subtitle{color:var(--muted);font-size:.9rem}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
+
+.search-box{
+  position:relative;margin-bottom:24px;
+}
+.search-box input{
+  width:100%;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:12px 16px 12px 42px;color:var(--text);font-family:var(--font-mono);font-size:.9rem;outline:none;
+}
+.search-box input:focus{border-color:var(--green)}
+.search-box input::placeholder{color:var(--dim)}
+.search-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--dim)}
+.result-count{font-size:.78rem;color:var(--dim);text-align:right;margin-top:4px}
+
+.cat-header{
+  font-family:var(--font-mono);font-size:.72rem;font-weight:600;
+  letter-spacing:2px;text-transform:uppercase;
+  padding:12px 0 8px;margin-top:16px;
+  display:flex;align-items:center;gap:10px;
+}
+.cat-header::after{content:'';flex:1;height:1px}
+.cat-1xx{color:var(--blue)}.cat-1xx::after{background:linear-gradient(90deg,rgba(88,166,255,.3),transparent)}
+.cat-2xx{color:var(--green)}.cat-2xx::after{background:linear-gradient(90deg,rgba(63,185,80,.3),transparent)}
+.cat-3xx{color:var(--yellow)}.cat-3xx::after{background:linear-gradient(90deg,rgba(210,153,34,.3),transparent)}
+.cat-4xx{color:var(--orange)}.cat-4xx::after{background:linear-gradient(90deg,rgba(229,149,75,.3),transparent)}
+.cat-5xx{color:var(--red)}.cat-5xx::after{background:linear-gradient(90deg,rgba(248,81,73,.3),transparent)}
+
+.code-item{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  margin-bottom:6px;cursor:pointer;transition:border-color .15s;overflow:hidden;
+}
+.code-item:hover,.code-item.focused{border-color:var(--dim)}
+.code-item.expanded{border-color:var(--green)}
+.code-summary{
+  display:flex;align-items:center;gap:12px;padding:10px 16px;
+}
+.code-num{
+  font-family:var(--font-mono);font-weight:700;font-size:.95rem;
+  min-width:38px;
+}
+.c1{color:var(--blue)}.c2{color:var(--green)}.c3{color:var(--yellow)}.c4{color:var(--orange)}.c5{color:var(--red)}
+.code-name{font-size:.9rem;font-weight:500;flex:1}
+.code-chevron{color:var(--dim);transition:transform .2s;font-size:.75rem}
+.code-item.expanded .code-chevron{transform:rotate(90deg)}
+
+.code-detail{
+  display:none;padding:0 16px 16px;border-top:1px solid var(--border);
+}
+.code-item.expanded .code-detail{display:block}
+.detail-section{margin-top:12px}
+.detail-label{font-size:.72rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.detail-text{font-size:.88rem;color:var(--text);line-height:1.55}
+.detail-text li{margin-left:16px;margin-bottom:2px}
+.detail-code{
+  background:var(--surface2);border:1px solid var(--border);border-radius:6px;
+  padding:10px 14px;font-family:var(--font-mono);font-size:.78rem;
+  line-height:1.6;white-space:pre;overflow-x:auto;margin-top:6px;color:var(--muted);
+}
+.detail-actions{margin-top:12px;display:flex;gap:8px}
+.btn-sm{
+  background:transparent;border:1px solid var(--border);border-radius:6px;
+  padding:5px 12px;font-size:.75rem;font-weight:600;color:var(--muted);
+  cursor:pointer;font-family:var(--font-sans);transition:all .15s;
+}
+.btn-sm:hover{border-color:var(--green);color:var(--green)}
+
+.toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);
+  background:var(--green);color:#fff;padding:10px 24px;border-radius:var(--radius);
+  font-size:.9rem;font-weight:600;opacity:0;transition:all .3s;pointer-events:none;z-index:100;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+footer{text-align:center;margin-top:48px;padding-top:24px;border-top:1px solid var(--border);font-size:.8rem;color:var(--dim)}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>HTTP<span class="a">Status</span></h1>
+    <p class="subtitle">Every status code explained. Search, click, learn.</p>
+  </header>
+
+  <div class="search-box">
+    <span class="search-icon">&#128269;</span>
+    <label for="search" class="sr-only">Search status codes</label>
+    <input type="text" id="search" placeholder="Search by code or name (e.g. 404, not found, redirect)..." autocomplete="off">
+  </div>
+  <div id="resultCount" class="result-count"></div>
+  <div id="codeList"></div>
+
+  <footer>Built by Rocket Labs AI</footer>
+</div>
+
+<div id="toast" class="toast" role="alert" aria-live="assertive"></div>
+
+<script>
+function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2000)}
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+
+const CODES=[
+// 1xx
+{code:100,name:"Continue",explain:"The server received the request headers and the client should proceed to send the body.",when:"Large file uploads — server confirms it's ready before you send the payload.",causes:["Client sent Expect: 100-continue header","Server acknowledges and waits for body"],fix:"Send the request body. This is normal behavior.",example:"POST /upload HTTP/1.1\nExpect: 100-continue\n\nHTTP/1.1 100 Continue"},
+{code:101,name:"Switching Protocols",explain:"The server is switching to a different protocol as requested by the client.",when:"WebSocket connections — the HTTP handshake upgrades to WS protocol.",causes:["Client sent Upgrade: websocket header","Server agrees to protocol switch"],fix:"Normal behavior during WebSocket handshake.",example:"GET /ws HTTP/1.1\nUpgrade: websocket\n\nHTTP/1.1 101 Switching Protocols\nUpgrade: websocket"},
+{code:103,name:"Early Hints",explain:"The server sends preliminary headers before the final response, letting the browser preload resources.",when:"Performance optimization — browser can start loading CSS/JS before the full response.",causes:["Server supports 103 Early Hints","Link headers point to critical resources"],fix:"No fix needed — this is a performance optimization.",example:"HTTP/1.1 103 Early Hints\nLink: </style.css>; rel=preload; as=style"},
+
+// 2xx
+{code:200,name:"OK",explain:"The request succeeded. The most common HTTP response.",when:"Every successful page load, API call, or resource fetch.",causes:["Request was valid","Server processed it successfully"],fix:"Nothing to fix — this means everything worked.",example:"GET /api/users HTTP/1.1\n\nHTTP/1.1 200 OK\nContent-Type: application/json\n\n{\"users\": [...]}"},
+{code:201,name:"Created",explain:"The request succeeded and a new resource was created.",when:"After POST requests that create something (new user, new record, uploaded file).",causes:["POST/PUT request created a new resource","Server confirms creation"],fix:"Check the Location header for the new resource's URL.",example:"POST /api/users HTTP/1.1\n\nHTTP/1.1 201 Created\nLocation: /api/users/42"},
+{code:204,name:"No Content",explain:"The request succeeded but there's no content to return.",when:"DELETE requests, PUT updates that don't return the updated resource, successful actions with no body.",causes:["Successful deletion","Successful update with no body needed"],fix:"Normal response — check if you expected a body.",example:"DELETE /api/users/42 HTTP/1.1\n\nHTTP/1.1 204 No Content"},
+{code:206,name:"Partial Content",explain:"The server is delivering only part of the resource due to a range header.",when:"Video streaming, resumable downloads, large file transfers.",causes:["Client sent Range header","Server supports partial content delivery"],fix:"Normal for streaming. Send Range headers to request specific byte ranges.",example:"GET /video.mp4 HTTP/1.1\nRange: bytes=0-999\n\nHTTP/1.1 206 Partial Content\nContent-Range: bytes 0-999/5000"},
+
+// 3xx
+{code:301,name:"Moved Permanently",explain:"The resource has permanently moved to a new URL. All future requests should use the new URL.",when:"Domain migrations, URL restructuring, HTTP→HTTPS redirects.",causes:["URL changed permanently","Domain migration","HTTP to HTTPS upgrade"],fix:"Update your links and bookmarks to the new URL in the Location header.",example:"GET /old-page HTTP/1.1\n\nHTTP/1.1 301 Moved Permanently\nLocation: https://example.com/new-page"},
+{code:302,name:"Found (Temporary Redirect)",explain:"The resource is temporarily at a different URL. Keep using the original URL for future requests.",when:"Maintenance pages, A/B testing, temporary URL routing.",causes:["Temporary redirect","Login redirect","A/B test routing"],fix:"Follow the redirect. The original URL will work again later.",example:"GET /dashboard HTTP/1.1\n\nHTTP/1.1 302 Found\nLocation: /login"},
+{code:304,name:"Not Modified",explain:"The resource hasn't changed since the last request. Use your cached version.",when:"Browser cache validation — saves bandwidth by not re-downloading unchanged resources.",causes:["If-Modified-Since or If-None-Match header matched","Resource hasn't changed"],fix:"Normal caching behavior. Your cached version is current.",example:"GET /style.css HTTP/1.1\nIf-None-Match: \"abc123\"\n\nHTTP/1.1 304 Not Modified"},
+{code:307,name:"Temporary Redirect",explain:"Like 302, but the request method MUST NOT change. A POST stays a POST.",when:"HTTPS upgrades, temporary URL changes where method matters.",causes:["Temporary redirect that preserves method","HSTS redirect"],fix:"Follow the redirect with the same HTTP method.",example:"POST /api/submit HTTP/1.1\n\nHTTP/1.1 307 Temporary Redirect\nLocation: /api/v2/submit"},
+{code:308,name:"Permanent Redirect",explain:"Like 301, but the request method MUST NOT change. A POST stays a POST.",when:"API versioning, permanent URL changes where method matters.",causes:["Permanent redirect that preserves method","API endpoint migration"],fix:"Update your code to use the new URL. Keep the same HTTP method.",example:"POST /api/v1/data HTTP/1.1\n\nHTTP/1.1 308 Permanent Redirect\nLocation: /api/v2/data"},
+
+// 4xx
+{code:400,name:"Bad Request",explain:"The server can't process the request due to a client error — malformed syntax, invalid parameters, or bad data.",when:"Invalid JSON, missing required fields, wrong parameter types.",causes:["Malformed JSON body","Missing required field","Invalid query parameter","Content-Type mismatch"],fix:"Check your request body, headers, and parameters. Validate JSON syntax.",example:"POST /api/users HTTP/1.1\nContent-Type: application/json\n\n{invalid json}\n\nHTTP/1.1 400 Bad Request\n{\"error\": \"Invalid JSON\"}"},
+{code:401,name:"Unauthorized",explain:"Authentication is required and has either failed or not been provided.",when:"Missing or invalid API key, expired JWT token, no login session.",causes:["Missing Authorization header","Invalid or expired token","Wrong API key","Session expired"],fix:"Include valid authentication credentials. Check your token hasn't expired.",example:"GET /api/profile HTTP/1.1\n\nHTTP/1.1 401 Unauthorized\nWWW-Authenticate: Bearer"},
+{code:403,name:"Forbidden",explain:"The server understood the request but refuses to authorize it. Authentication won't help.",when:"Insufficient permissions, IP blocked, rate limited, accessing admin-only resources.",causes:["Insufficient permissions","IP blocklist","CORS policy violation","Rate limit exceeded"],fix:"Check your permissions. You're authenticated but not authorized for this resource.",example:"GET /admin/settings HTTP/1.1\nAuthorization: Bearer valid-token\n\nHTTP/1.1 403 Forbidden\n{\"error\": \"Admin access required\"}"},
+{code:404,name:"Not Found",explain:"The server can't find the requested resource. The most recognized HTTP error.",when:"Broken links, typos in URLs, deleted pages, wrong API endpoints.",causes:["URL typo","Resource deleted","Wrong API endpoint","Missing route"],fix:"Check the URL for typos. Verify the resource exists. Check API documentation.",example:"GET /api/users/99999 HTTP/1.1\n\nHTTP/1.1 404 Not Found\n{\"error\": \"User not found\"}"},
+{code:405,name:"Method Not Allowed",explain:"The HTTP method used is not supported for this endpoint.",when:"Sending POST to a GET-only endpoint, or DELETE to a read-only resource.",causes:["Wrong HTTP method","Endpoint only supports specific methods","CORS preflight mismatch"],fix:"Check the Allow header in the response for supported methods.",example:"DELETE /api/users HTTP/1.1\n\nHTTP/1.1 405 Method Not Allowed\nAllow: GET, POST"},
+{code:408,name:"Request Timeout",explain:"The server timed out waiting for the client to finish sending the request.",when:"Slow network connections, large uploads on unstable connections.",causes:["Slow client connection","Upload interrupted","Network instability"],fix:"Retry the request. Check your network connection.",example:"POST /upload HTTP/1.1\n(connection stalled)\n\nHTTP/1.1 408 Request Timeout"},
+{code:409,name:"Conflict",explain:"The request conflicts with the current state of the server.",when:"Duplicate entries, version conflicts, concurrent edits, already-exists errors.",causes:["Duplicate unique field","Optimistic locking conflict","Resource already exists","Concurrent modification"],fix:"Resolve the conflict — fetch the latest state and retry.",example:"POST /api/users HTTP/1.1\n{\"email\": \"taken@example.com\"}\n\nHTTP/1.1 409 Conflict\n{\"error\": \"Email already registered\"}"},
+{code:410,name:"Gone",explain:"The resource existed once but has been permanently removed. Unlike 404, this is intentional and permanent.",when:"Deprecated API endpoints, deleted content that shouldn't return.",causes:["Resource intentionally deleted","API version sunset","Content takedown"],fix:"The resource is gone forever. Remove your references to it.",example:"GET /api/v1/legacy HTTP/1.1\n\nHTTP/1.1 410 Gone\n{\"error\": \"API v1 has been retired\"}"},
+{code:413,name:"Payload Too Large",explain:"The request body exceeds the server's size limit.",when:"Uploading files that are too large, sending huge JSON payloads.",causes:["File exceeds upload limit","JSON body too large","Server body-parser limit"],fix:"Reduce payload size. Check server's max body size configuration.",example:"POST /upload HTTP/1.1\nContent-Length: 500000000\n\nHTTP/1.1 413 Payload Too Large"},
+{code:415,name:"Unsupported Media Type",explain:"The server doesn't support the content type of the request body.",when:"Sending form data when JSON is expected, wrong Content-Type header.",causes:["Wrong Content-Type header","Server expects application/json","Unsupported file format"],fix:"Set the correct Content-Type header. Check API docs for expected format.",example:"POST /api/data HTTP/1.1\nContent-Type: text/plain\n\nHTTP/1.1 415 Unsupported Media Type"},
+{code:418,name:"I'm a Teapot",explain:"The server refuses to brew coffee because it is, in fact, a teapot. An April Fools' joke from 1998 (RFC 2324) that became a real status code.",when:"Easter eggs, joke APIs, and developers having fun.",causes:["You asked a teapot to brew coffee","Developer humor"],fix:"Accept that you're talking to a teapot. Try a coffee maker instead.",example:"BREW /coffee HTTP/1.1\n\nHTTP/1.1 418 I'm a Teapot\n{\"error\": \"Short and stout\"}"},
+{code:422,name:"Unprocessable Entity",explain:"The request is well-formed but semantically invalid. The server understands the syntax but can't process the content.",when:"Validation errors — correct JSON format but invalid field values.",causes:["Field validation failed","Business logic rejection","Invalid enum value","Number out of range"],fix:"Check your field values against the API's validation rules.",example:"POST /api/users HTTP/1.1\n{\"email\": \"not-an-email\", \"age\": -5}\n\nHTTP/1.1 422 Unprocessable Entity\n{\"errors\": [\"Invalid email\", \"Age must be positive\"]}"},
+{code:429,name:"Too Many Requests",explain:"You've sent too many requests in a given time period. Rate limited.",when:"API rate limits, login attempt throttling, DDoS protection.",causes:["Exceeded rate limit","Too many API calls","Brute force protection triggered"],fix:"Wait and retry. Check Retry-After header. Implement exponential backoff.",example:"GET /api/data HTTP/1.1\n\nHTTP/1.1 429 Too Many Requests\nRetry-After: 60\n{\"error\": \"Rate limit exceeded\"}"},
+{code:451,name:"Unavailable for Legal Reasons",explain:"The resource is blocked due to legal demands (censorship, court order, DMCA).",when:"Government censorship, DMCA takedowns, GDPR compliance blocks.",causes:["Government censorship order","DMCA takedown","Legal compliance requirement","Geo-restriction"],fix:"The content is legally blocked. Try a different jurisdiction or contact the provider.",example:"GET /blocked-content HTTP/1.1\n\nHTTP/1.1 451 Unavailable For Legal Reasons"},
+
+// 5xx
+{code:500,name:"Internal Server Error",explain:"The server encountered an unexpected condition that prevented it from fulfilling the request. The catch-all server error.",when:"Unhandled exceptions, database errors, null pointer crashes, misconfiguration.",causes:["Unhandled exception","Database connection failure","Null reference error","Missing environment variable"],fix:"Check server logs. This is a bug on the server side, not the client's fault.",example:"GET /api/data HTTP/1.1\n\nHTTP/1.1 500 Internal Server Error\n{\"error\": \"Something went wrong\"}"},
+{code:502,name:"Bad Gateway",explain:"The server acting as a gateway received an invalid response from the upstream server.",when:"Reverse proxy can't reach the backend, microservice is down, deployment in progress.",causes:["Backend server crashed","Deployment in progress","Upstream timeout","Invalid response from backend"],fix:"The upstream server is the problem. Check if the backend service is running.",example:"GET /api/data HTTP/1.1\n\nHTTP/1.1 502 Bad Gateway\nnginx/1.24.0"},
+{code:503,name:"Service Unavailable",explain:"The server is temporarily unable to handle the request, usually due to overload or maintenance.",when:"Server overloaded, maintenance mode, auto-scaling hasn't caught up yet.",causes:["Server overloaded","Maintenance mode","Deployment in progress","Resource exhaustion"],fix:"Wait and retry. Check Retry-After header. The service should recover.",example:"GET /api/data HTTP/1.1\n\nHTTP/1.1 503 Service Unavailable\nRetry-After: 120"},
+{code:504,name:"Gateway Timeout",explain:"The server acting as a gateway didn't receive a timely response from the upstream server.",when:"Slow database queries, upstream service hanging, network issues between services.",causes:["Upstream server too slow","Database query timeout","Network partition","Long-running request"],fix:"The upstream server is too slow. Increase timeout or optimize the backend.",example:"GET /api/slow-query HTTP/1.1\n\nHTTP/1.1 504 Gateway Timeout"},
+{code:507,name:"Insufficient Storage",explain:"The server can't store the representation needed to complete the request.",when:"Disk full, quota exceeded, database storage limit reached.",causes:["Disk space exhausted","Storage quota exceeded","Database full"],fix:"Free up storage space or increase storage quota.",example:"PUT /api/upload HTTP/1.1\n\nHTTP/1.1 507 Insufficient Storage"},
+{code:508,name:"Loop Detected",explain:"The server detected an infinite loop while processing the request.",when:"Circular redirects, recursive server-side includes, infinite proxy chains.",causes:["Circular redirect configuration","Recursive includes","Proxy loop"],fix:"Check your redirect rules and proxy configuration for cycles.",example:"GET /page-a HTTP/1.1\n→ 301 /page-b\n→ 301 /page-a\n→ 508 Loop Detected"},
+{code:511,name:"Network Authentication Required",explain:"The client needs to authenticate to gain network access (captive portal).",when:"Hotel/airport WiFi, corporate networks, any captive portal.",causes:["Captive portal requiring login","Network access requires authentication"],fix:"Open a browser and complete the WiFi login page.",example:"GET /anything HTTP/1.1\n\nHTTP/1.1 511 Network Authentication Required"},
+];
+
+const CAT_NAMES={1:'1xx Informational',2:'2xx Success',3:'3xx Redirection',4:'4xx Client Error',5:'5xx Server Error'};
+const CAT_CLASSES={1:'cat-1xx',2:'cat-2xx',3:'cat-3xx',4:'cat-4xx',5:'cat-5xx'};
+const CODE_CLASSES={1:'c1',2:'c2',3:'c3',4:'c4',5:'c5'};
+
+let focusIdx = -1;
+
+function render(filter='') {
+  const q = filter.toLowerCase();
+  const filtered = q ? CODES.filter(c =>
+    String(c.code).includes(q) ||
+    c.name.toLowerCase().includes(q) ||
+    c.explain.toLowerCase().includes(q) ||
+    (c.causes && c.causes.some(x => x.toLowerCase().includes(q)))
+  ) : CODES;
+
+  const list = document.getElementById('codeList');
+  const countEl = document.getElementById('resultCount');
+  countEl.textContent = q ? `${filtered.length} of ${CODES.length} codes` : `${CODES.length} status codes`;
+
+  let html = '';
+  let lastCat = 0;
+
+  filtered.forEach((c, i) => {
+    const cat = Math.floor(c.code / 100);
+    if (cat !== lastCat) {
+      html += `<div class="cat-header ${CAT_CLASSES[cat]}">${CAT_NAMES[cat]}</div>`;
+      lastCat = cat;
+    }
+    const cc = CODE_CLASSES[cat];
+    html += `<div class="code-item" data-idx="${i}" onclick="toggle(this)" tabindex="0">
+      <div class="code-summary">
+        <span class="code-num ${cc}">${c.code}</span>
+        <span class="code-name">${esc(c.name)}</span>
+        <span class="code-chevron">&#9654;</span>
+      </div>
+      <div class="code-detail">
+        <div class="detail-section">
+          <div class="detail-label">What it means</div>
+          <div class="detail-text">${esc(c.explain)}</div>
+        </div>
+        <div class="detail-section">
+          <div class="detail-label">When you'd see it</div>
+          <div class="detail-text">${esc(c.when)}</div>
+        </div>
+        <div class="detail-section">
+          <div class="detail-label">Common causes</div>
+          <div class="detail-text"><ul>${c.causes.map(x=>'<li>'+esc(x)+'</li>').join('')}</ul></div>
+        </div>
+        <div class="detail-section">
+          <div class="detail-label">How to fix it</div>
+          <div class="detail-text">${esc(c.fix)}</div>
+        </div>
+        <div class="detail-section">
+          <div class="detail-label">Example</div>
+          <div class="detail-code">${esc(c.example)}</div>
+        </div>
+        <div class="detail-actions">
+          <button class="btn-sm" onclick="event.stopPropagation();copyCode(${c.code})">Copy as Markdown</button>
+        </div>
+      </div>
+    </div>`;
+  });
+
+  list.innerHTML = html;
+  focusIdx = -1;
+}
+
+function toggle(el) {
+  const wasExpanded = el.classList.contains('expanded');
+  document.querySelectorAll('.code-item.expanded').forEach(e => e.classList.remove('expanded'));
+  if (!wasExpanded) el.classList.add('expanded');
+}
+
+function copyCode(code) {
+  const c = CODES.find(x => x.code === code);
+  if (!c) return;
+  const md = `## ${c.code} ${c.name}\n\n**What it means:** ${c.explain}\n\n**When you'd see it:** ${c.when}\n\n**Common causes:**\n${c.causes.map(x=>'- '+x).join('\n')}\n\n**How to fix:** ${c.fix}\n\n**Example:**\n\`\`\`\n${c.example}\n\`\`\`\n`;
+  navigator.clipboard.writeText(md).then(()=>showToast('Copied!')).catch(()=>showToast('Copy failed'));
+}
+
+// Search
+document.getElementById('search').addEventListener('input', e => render(e.target.value));
+
+// Keyboard nav
+document.addEventListener('keydown', e => {
+  if (document.activeElement === document.getElementById('search') && e.key !== 'ArrowDown') return;
+  const items = document.querySelectorAll('.code-item');
+  if (!items.length) return;
+
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    focusIdx = Math.min(focusIdx + 1, items.length - 1);
+    items.forEach(i => i.classList.remove('focused'));
+    items[focusIdx].classList.add('focused');
+    items[focusIdx].scrollIntoView({ block: 'nearest' });
+    items[focusIdx].focus();
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    focusIdx = Math.max(focusIdx - 1, 0);
+    items.forEach(i => i.classList.remove('focused'));
+    items[focusIdx].classList.add('focused');
+    items[focusIdx].scrollIntoView({ block: 'nearest' });
+    items[focusIdx].focus();
+  } else if (e.key === 'Enter' && focusIdx >= 0) {
+    e.preventDefault();
+    toggle(items[focusIdx]);
+  }
+});
+
+// URL param support
+const p = new URLSearchParams(window.location.search);
+if (p.get('code')) {
+  document.getElementById('search').value = p.get('code');
+  render(p.get('code'));
+} else {
+  render();
+}
+</script>
+
+</body>
+</html>
